@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String      @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  recordings    Recording[]
+  preferences   UserPreferences?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model UserPreferences {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultMode         String  @default("screen")
+  defaultAudioDevice  String?
+  defaultVideoDevice  String?
+  includeSystemAudio  Boolean @default(true)
+  countdownSeconds    Int     @default(3)
+  shortcutToggle      String  @default("Ctrl+Shift+R")
+  shortcutPause       String  @default("Ctrl+Shift+P")
+}
+
+model Recording {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String    @default("Untitled Recording")
+  description     String?
+  durationSeconds Int       @default(0)
+  mode            String
+  mimeType        String    @default("video/webm")
+  fileSize        Int       @default(0)
+  driveFileId     String?
+  driveWebLink    String?
+  thumbnailDriveId String?
+  transcript      String?   @db.Text
+  summary         String?   @db.Text
+  actionItems     String?   @db.Text
+  sopGuide        String?   @db.Text
+  aiStatus        String    @default("pending")
+  isPublic        Boolean   @default(false)
+  shareToken      String?   @unique
+  localIdbKey     String?
+  uploadStatus    String    @default("local")
+  uploadProgress  Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([shareToken])
+}
