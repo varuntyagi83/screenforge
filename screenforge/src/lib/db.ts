@@ -9,8 +9,7 @@ const globalForPrisma = globalThis as unknown as {
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL
   if (!connectionString) {
-    // Return a client that will fail on first query — allows build to succeed
-    return new PrismaClient({ adapter: new PrismaPg(new pg.Pool()) })
+    throw new Error('DATABASE_URL environment variable is not set')
   }
   const pool = new pg.Pool({ connectionString })
   const adapter = new PrismaPg(pool)

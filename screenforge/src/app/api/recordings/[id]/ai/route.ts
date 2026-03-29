@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/get-session'
 import { prisma } from '@/lib/db'
 
 export async function POST(
@@ -7,10 +7,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const recording = await prisma.recording.findUnique({ where: { id } })
   if (!recording || recording.userId !== session.user.id) {
@@ -19,12 +17,10 @@ export async function POST(
 
   await prisma.recording.update({ where: { id }, data: { aiStatus: 'summarizing' } })
 
-  // Background processing
   void (async () => {
     try {
       const { generateSummary } = await import('@/lib/ai')
 
-      // Parse transcript
       let transcriptText = ''
       if (recording.transcript) {
         try {

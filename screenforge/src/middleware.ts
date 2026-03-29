@@ -1,24 +1,31 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export default auth((req) => {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Public routes
-  const publicPaths = ['/login', '/share', '/api/auth', '/api/share']
-  const isPublic = publicPaths.some((p) => pathname.startsWith(p)) || pathname === '/'
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/share') ||
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon')
+  ) {
+    return NextResponse.next()
+  }
 
-  if (isPublic) return NextResponse.next()
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
 
-  // Protected routes — redirect to login if no session
-  if (!req.auth) {
+  if (!token) {
     const loginUrl = new URL('/login', req.nextUrl.origin)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],

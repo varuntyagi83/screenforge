@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/get-session'
 import { prisma } from '@/lib/db'
 import { nanoid } from 'nanoid'
 
-// GET /api/recordings — list user's recordings
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const url = new URL(req.url)
   const page = parseInt(url.searchParams.get('page') ?? '1', 10)
@@ -28,12 +25,9 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ recordings, total, page, limit })
 }
 
-// POST /api/recordings — create recording metadata
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json() as {
     title?: string

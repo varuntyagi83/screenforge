@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getSession } from '@/lib/get-session'
 import { prisma } from '@/lib/db'
 import { findOrCreateAppFolder, uploadFile } from '@/lib/drive'
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await getSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Get access token from the JWT
-  // @ts-expect-error accessing custom JWT field
-  const accessToken = session.accessToken as string | undefined
+  const accessToken = session.user.accessToken
   if (!accessToken) {
     return NextResponse.json({ error: 'No Drive access token' }, { status: 403 })
   }
@@ -24,7 +20,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing file or recordingId' }, { status: 400 })
   }
 
-  // Verify ownership
   const recording = await prisma.recording.findUnique({ where: { id: recordingId } })
   if (!recording || recording.userId !== session.user.id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })

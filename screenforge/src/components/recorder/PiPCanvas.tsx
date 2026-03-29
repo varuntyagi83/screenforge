@@ -22,7 +22,7 @@ const positions: { value: CameraPosition; label: string }[] = [
 export function PiPCanvas({ canvasRef, isCompositing, cameraPosition, onPositionChange, fps }: PiPCanvasProps) {
   return (
     <div className="space-y-2">
-      <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={canvasRef as React.RefObject<HTMLCanvasElement>} className="hidden" />
 
       {isCompositing && (
         <div className="flex items-center gap-4">
