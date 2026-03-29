@@ -17,6 +17,10 @@ function selectMimeType(): string {
   return 'video/webm'
 }
 
+interface UseMediaRecorderOptions {
+  onChunk?: (chunk: Blob, isLast: boolean) => void
+}
+
 interface UseMediaRecorderReturn {
   state: RecordingState
   duration: number
@@ -29,7 +33,7 @@ interface UseMediaRecorderReturn {
   discardRecording: () => void
 }
 
-export function useMediaRecorder(): UseMediaRecorderReturn {
+export function useMediaRecorder(options?: UseMediaRecorderOptions): UseMediaRecorderReturn {
   const [state, setState] = useState<RecordingState>('idle')
   const [duration, setDuration] = useState(0)
   const [blob, setBlob] = useState<Blob | null>(null)
@@ -93,6 +97,8 @@ export function useMediaRecorder(): UseMediaRecorderReturn {
       recorder.ondataavailable = (e: BlobEvent) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data)
+          // Stream chunk to server in real-time
+          options?.onChunk?.(e.data, false)
         }
       }
 
@@ -100,6 +106,11 @@ export function useMediaRecorder(): UseMediaRecorderReturn {
         const recordedBlob = new Blob(chunksRef.current, { type: mimeType })
         setBlob(recordedBlob)
         cancelAnimationFrame(rafRef.current)
+        // Signal last chunk
+        if (chunksRef.current.length > 0) {
+          const lastChunk = chunksRef.current[chunksRef.current.length - 1]
+          if (lastChunk) options?.onChunk?.(lastChunk, true)
+        }
         setState('stopped')
       }
 
@@ -118,7 +129,7 @@ export function useMediaRecorder(): UseMediaRecorderReturn {
       setError(err instanceof Error ? err.message : 'Failed to start recording')
       setState('error')
     }
-  }, [startDurationLoop])
+  }, [startDurationLoop, options])
 
   const pauseRecording = useCallback(() => {
     try {
